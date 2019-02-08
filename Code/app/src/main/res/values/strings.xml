@@ -1,0 +1,24 @@
+<resources>
+    <string name="appName">Calculatrice</string>
+
+
+    <string name="nombre_1">1</string>
+    <string name="nombre_2">2</string>
+    <string name="nombre_3">3</string>
+    <string name="nombre_4">4</string>
+    <string name="nombre_5">5</string>
+    <string name="nombre_6">6</string>
+    <string name="nombre_7">7</string>
+    <string name="nombre_8">8</string>
+    <string name="nombre_9">9</string>
+    <string name="nombre_0">0</string>
+
+    <string name="action_sup">Sup</string>
+    <string name="action_div">/</string>
+    <string name="action_mult">*</string>
+    <string name="action_min">-</string>
+    <string name="action_add">+</string>
+
+    <string name="comma">,</string>
+    <string name="save">Save</string>
+</resources>
