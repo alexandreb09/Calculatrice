@@ -19,8 +19,8 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:text="Operation"
-            android:theme="@style/ViewerStyle"
+            android:id="@+id/operation"
+            android:theme="@style/ResultStyle"
             android:layout_weight="1.0"
             />
 
@@ -28,9 +28,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:id="@+id/resultat"
-            android:text="Resultat"
             android:layout_weight="1.0"
-            android:theme="@style/ViewerStyle"
+            android:theme="@style/ResultStyle"
             />
 
     </LinearLayout>
