@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/historique_id"
+        android:title="@string/historique"
+        app:showAsAction="always" />
+
+    <item android:id="@+id/vider_historique_id"
+        android:title="@string/vider_historique"/>
+
+</menu>

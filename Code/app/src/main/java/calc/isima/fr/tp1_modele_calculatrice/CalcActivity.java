@@ -1,20 +1,25 @@
 package calc.isima.fr.tp1_modele_calculatrice;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.udojava.evalex.Expression;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Arrays;
-import java.util.List;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 
 
 
@@ -22,8 +27,8 @@ import java.util.List;
  * Activity qui affiche la calculatrice.
  */
 
-public class CalcActivity extends Activity implements View.OnClickListener {
-    private static final String TAG = CalcActivity.class.getName();
+public class CalcActivity extends Activity implements View.OnClickListener, View.OnLongClickListener {
+    // private static final String TAG = CalcActivity.class.getName();                                 // TAG pour identifier classe dans les logs
 
 
     /** Nom du fichier dans lequel seront stockés les expressions et les résultats correspondants. */
@@ -57,21 +62,25 @@ public class CalcActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.calc_activity);
+        setContentView(R.layout.calc_activity);                                                     // Construction vue
 
-        resultView = findViewById(R.id.resultat);
-        expressionView = findViewById(R.id.operation);
+        resultView = findViewById(R.id.resultat);                                                   // Association ResltView à la vue
+        expressionView = findViewById(R.id.operation);                                              // Association expressionView à la vue
 
-        for (int number : numbers) {
-            myButton = findViewById(number);
-            myButton.setOnClickListener(this);
+        for (int number : numbers) {                                                                // Pour tous les nombres
+            myButton = findViewById(number);                                                        // Association du boutton à la vue
+            myButton.setOnClickListener(this);                                                      // Ajout methode onClick
         }
 
-        for (int number : operators) {
-            myButton = findViewById(number);
-            myButton.setOnClickListener(this);
+        for (int pointer : operators) {                                                             // Pour chaque opérateurs
+            myButton = findViewById(pointer);                                                       // Association du boutton à la vue
+            myButton.setOnClickListener(this);                                                      // Ajout methode onClick
         }
 
+        myButton = findViewById(R.id.save);                                                         // Association boutton save à la vue
+        myButton.setOnClickListener(this);                                                          // Ajout methode onClick
+        myButton  = findViewById(R.id.opDel);                                                       // Association boutton save à la vue
+        myButton.setOnLongClickListener(this);                                                      // Ajout methode onLongClick
     }
 
     /**
@@ -81,8 +90,7 @@ public class CalcActivity extends Activity implements View.OnClickListener {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
-        // getMenuInflater().inflate(R.menu.calc, menu);
-
+        getMenuInflater().inflate(R.menu.calc, menu);                                               // Transformation fichier menu <xml> en objet java
         return true;
     }
 
@@ -92,24 +100,50 @@ public class CalcActivity extends Activity implements View.OnClickListener {
      */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-
-
+        switch (item.getItemId()) {                                                                 // Selon l'item selectionné dans le menu
+            case (R.id.historique_id):                                                              // Si appuie sur item historique
+                Intent historique_act = new Intent(this,HistoriqueActivity.class);     // Création nouvelle intent
+                startActivity(historique_act);                                                      // Lancement nouvelle activité
+                break;
+            case (R.id.vider_historique_id):                                                        // Si appuie sur item vider historique
+                viderHistorique();                                                                  // Suppression historique
+                break;
             default:
-                return super.onOptionsItemSelected(item);
+                break;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    /**
+     * Action à exécuter lors de l'appui sur la vue
+     * @param v : view sur laquelle on étudie un clique
+     */
+    @Override
+    public void onClick(View v){
+        int view_id = v.getId();                                                                    // Récupération ID
+
+        if (ArrayUtils.contains(operators,view_id)){                                                // S'il s'agit d'un opérateur
+            onOperatorClicked(view_id);
+        }
+        else if (R.id.save == view_id && !expression.equals("")){                                   // Si appuie sur bouton sauvegarde et expression non vide
+            onSave();                                                                               // Sauvegarde calcul
+        }
+        else {                                                                                      // Sinon (appui sur un bouton)
+            onNumberClicked(view_id);                                                               // Traitement appui sur bouton
         }
     }
 
+    /**
+     * Ré-écriture de la méthode onLongClick : remise à zero des opérations et résultats
+     * @param v : view sur laquelle on étudie un long clicque
+     * @return boolean : false
+     */
     @Override
-    public void onClick(View v){
-        int view_id = v.getId();
-
-        if (ArrayUtils.contains(operators,view_id)){
-            onOperatorClicked(view_id);
-        }
-        else {
-            onNumberClicked(view_id);
-        }
+    public boolean onLongClick(View v) {
+        expression = "";                                                                            // Réinitialisation expression
+        resultView.setText("");                                                                     // Reinitialisation resultat dans la vue
+        expressionView.setText("");                                                                 // Réinitialisation expression dans la vue
+        return false;
     }
 
 
@@ -118,7 +152,43 @@ public class CalcActivity extends Activity implements View.OnClickListener {
      * sur le bouton Save.
      */
     private void onSave() {
-        // TODO
+        try {
+            String resultat = resultView.getText().toString();                                      // Récupération résultat depuis la vue
+            // Note : On aurait pu le récupérer depuis le tableau des ID
+
+            String ope_sauvegardee = expression.concat("\t").concat(resultat).concat("\n");         // Opération qui est sauvegardée
+
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(this.openFileOutput(SAVE_FILE_NAME, Context.MODE_APPEND));   // Ouverture fichier
+            outputStreamWriter.write(ope_sauvegardee);                                              // Ecriture dans le fichier
+
+            IOUtils.closeQuietly(outputStreamWriter);                                               // Fermuture fichier
+
+            String toastTextReussie = getString(R.string.toast_sauvegarde_reussi);                                       // Message d'information sauvegarde réussie
+            display_toast(toastTextReussie);                                                        // Création notification (toast)
+        } catch (IOException e) {                                                                   // Si une erreur se produit
+            display_toast(getString(R.string.toast_sauvegarde_echouee));                                                 // Avertissement de l'utilisateur
+        }
+    }
+
+    /**
+     * Fonction utilitaire permettant d'afficher un toast
+     * @param toast_message Message à afficher dans le toast
+     */
+    public void display_toast(String toast_message){
+        Toast.makeText(this, toast_message, Toast.LENGTH_LONG).show();                       // Création toast
+    }
+
+    /**
+     * Méthode effacant l'historique : supprime le fichier de sauvegarde et en informe l'utilisateur
+     */
+    public void viderHistorique(){
+        File file = new File(getFilesDir(), SAVE_FILE_NAME);                                        // Création objet Fichier associé au fichier txt
+        boolean deleted = file.delete();                                                            // Suppression fichier
+        String resultMessage = getString(R.string.toast_supp_reussie);                                             // Message d'information par défaut (réussite)
+        if (!deleted){                                                                              // Si la suppression a échoué
+            resultMessage = getString(R.string.toast_supp_echouee);                  // Message d'erreur
+        }
+        display_toast(resultMessage);                                                               // Information utilisateur du résultat de la suppression
     }
 
     /**
@@ -126,28 +196,44 @@ public class CalcActivity extends Activity implements View.OnClickListener {
      * @param numberId Identifiant de la View cliquée.
      */
     private void onNumberClicked(int numberId) {
-        Button b = findViewById(numberId);
-        String charToAdd = b.getText().toString();
-        updateExpression(charToAdd, false);
+        Button b = findViewById(numberId);                                                          // Récupération du bouton
+        String charToAdd = b.getText().toString();                                                  // Récupération du text à partir du texte afficher dans la vue
+        updateExpression(charToAdd, false);                                                // MAJ expression
     }
 
     /**
-     * Méthode à appeler lorsque l'utilisateur clique sur un opérateur, sur la virgule ou sur le bouton Supprimer.
+     * Méthode appelée lorsque l'utilisateur clique sur un opérateur, sur la virgule ou sur le bouton Supprimer.
      * @param operatorId Identifiant de la View cliquée.
      */
     private void onOperatorClicked(int operatorId) {
-        Button b = findViewById(operatorId);
-        String charToAdd = b.getText().toString();
-        if (operators[4] == operatorId){
-            expression = expression.substring(0, expression.length() - 1);
-            resultView.setText(expression);
-            expressionView.setText(expression);
+        Button b = findViewById(operatorId);                                                        // Récupération bouton associé à la vue
+        String charToAdd = b.getText().toString();                                                  // Récupération du texte à partir du texte afficher dans la vue
+        if (expression.equals("")){                                                                 // Si expression vide
+            if (operatorId == operators[1]){                                                        // seul soustraction est possible (nb negatif)
+                updateExpression(charToAdd, true);                                        // Traitement nombre
+            }
         }
-        else if (operators[5] == operatorId){
-            updateExpression(".", true);
-        }
-        else{
-            updateExpression(charToAdd, true);
+        else {
+            if (operators[4] == operatorId){                                                        // Si appui sur suppression
+                if (!expression.equals("")) {                                                       // Si l'expression est non vide
+                    expression = expression.substring(0, expression.length() - 1);                  // Suppression dernier element
+                    expressionView.setText(expression);                                             // MAJ Expression
+                    if (expression.equals("") || (!expression.equals("") && expressionEndsWithOperator() )){
+                        resultView.setText("");                                                     // MAJ résultat
+                    }
+                    else {
+                        updateResult();                                                             // MAJ résultat
+                    }
+                }
+            }
+            else if (operators[5] == operatorId){                                                   // S'il s'agit d'une virgule
+                if (ajoutCommaPossible()){                                                          // Si l'ajout est possible
+                    updateExpression(".", true);                                       // Applique traitement
+                }
+            }
+            else{                                                                                   // Pour les autres opérateurs
+                updateExpression(charToAdd, true);                                        // Ajout normal
+            }
         }
     }
 
@@ -157,14 +243,16 @@ public class CalcActivity extends Activity implements View.OnClickListener {
      * @param isOperator True si le caractère est un opérateur (y compris une virgule), ou false si c'est un nombre.
      */
     private void updateExpression(String val, boolean isOperator) {
-        if (isOperator && expressionEndsWithOperator()) {
-            expression = StringUtils.substring(expression, 0, -1);
+        // Si on ajoute un opérateur différent du point et que l'expression se termine par un opérateur
+        // (si on ajoute par un point, on ajoute l'ajoutera sans supprimer le dernier élément
+        if (isOperator && expressionEndsWithOperator() && !val.equals(".")){
+            expression = StringUtils.substring(expression, 0, -1);                        // On supprime le dernier élément
         }
         expression += val;                                                                          // Ajout nouveau caractère
-        expressionView.setText(expression);
+        expressionView.setText(expression);                                                         // MAJ affichage
 
-        if (!isOperator) {
-            updateResult();
+        if (!isOperator) {                                                                          // Si on ajoute un nombre
+            updateResult();                                                                         // MAJ résultat
         }
     }
 
@@ -173,10 +261,13 @@ public class CalcActivity extends Activity implements View.OnClickListener {
      * @return True si l'expression se termine par un opérateur, false sinon.
      */
     private boolean expressionEndsWithOperator() {
-        int lenght = expression.length();                                                           // Longueur expression
-        String last_letter = expression.substring(lenght - 1);                                      // Dernier caractère
-        List<String> operators = Arrays.asList("+", "-", "/", "*");                                 // Liste de opérateur
-        return operators.contains(last_letter);                                                     // dernier caract dans liste opérateurs ?
+        boolean rep = true;
+        if (!expression.equals("")) {
+            int lenght = expression.length();                                                       // Longueur expression
+            char last_letter = expression.charAt(lenght - 1);                                       // Dernier caractère
+            rep = isOperator(last_letter);                                                          // est il un opérateur
+        }
+        return rep;
     }
 
     /**
@@ -185,9 +276,15 @@ public class CalcActivity extends Activity implements View.OnClickListener {
      * @return Résultat.
      */
     private String evaluateExpression() {
-        String eval = "";
-        eval += new Expression(expression).eval().toPlainString();
-
+        String eval = "";                                                                           // Initialisation résultat
+        if (!expression.equals("")){                                                                // Si expression non vide
+            try{                                                                                    // Tentative ...
+                eval += new Expression(expression).eval().toPlainString();                          // ... d'évaluation
+            }
+            catch (Exception e){                                                                    // Si erreur
+                eval = getString(R.string.erreur);                                                                  // message d'erreur retourné
+            }
+        }
         return eval;
     }
 
@@ -195,6 +292,32 @@ public class CalcActivity extends Activity implements View.OnClickListener {
      * Cette méthode doit mettre à jour la View d'affichage du résultat.
      */
     private void updateResult() {
-        resultView.setText(evaluateExpression());
+        resultView.setText(evaluateExpression());                                                   // MAJ vue du résultat de l'évaluation
+    }
+
+    /**
+     * Vérifier si un caractère est un opérateur
+     * @param c : caractère à tester
+     * @return boolean
+     */
+    private boolean isOperator(char c){
+        return c == '*' || c == '/' || c == '-' ||c == '+';
+    }
+
+    /**
+     * Indique si l'ajout d'une virgule est possible
+     * @return boolean
+     */
+    private boolean ajoutCommaPossible(){
+        int i = expression.length()-1;                                                              // index dernier élément
+        boolean rep = true;                                                                         // init réponse
+        // Tant que l'on est pas au début et que l'on ne trouve ni d'opérateur ni de point
+        while (i >=0 && expression.charAt(i) != '.' && !isOperator(expression.charAt(i))){
+            i--;                                                                                    // On remonte la chaine de caract
+        }
+        if (i>=0){                                                                                  // Si on n'est pas au début
+            rep = expression.charAt(i) != '.';                                                      // On regarde si l'élément sur lequel on est un point
+        }
+        return rep;
     }
 }
